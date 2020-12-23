@@ -344,6 +344,8 @@ private:
     String mountStatusString();
   #endif
 
+  // Stops specific guide operation in progress.
+  void stopGuiding( bool ra, bool dec );
 
   void autoCalcHa();
 
@@ -410,7 +412,8 @@ private:
     #endif 
   #endif
 
-  unsigned long _guideEndTime;
+  unsigned long _guideRaEndTime;
+  unsigned long _guideDecEndTime;
   unsigned long _lastMountPrint = 0;
   unsigned long _lastTrackingPrint = 0;
   float _trackingSpeed;
