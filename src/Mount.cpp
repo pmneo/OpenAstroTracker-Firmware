@@ -612,7 +612,8 @@ void Mount::configureDECStepper(byte stepMode, byte pin1, byte pin2, int maxSpee
 #endif
 
 #if RA_DRIVER_TMC2209_UART_MODE == TMC2209_MODE_UART || DEC_DRIVER_TMC2209_UART_MODE == TMC2209_MODE_UART 
-void connectToDriver( TMC2209Stepper* driver, LcdMenu* _lcdMenu, const char *driverKind ) {
+
+void Mount::connectToDriver( TMC2209Stepper* driver, const char *driverKind ) {
     int testConnection;
     for(int i=0; i<5; i++) {
         testConnection = driver->test_connection();
@@ -624,6 +625,7 @@ void connectToDriver( TMC2209Stepper* driver, LcdMenu* _lcdMenu, const char *dri
         }
     }
 
+    #if DISPLAY_TYPE > 0
     if( testConnection != 0 ) {
        char scratchBuffer[24];
        sprintf(scratchBuffer, "%s Drv Status", driverKind );
@@ -634,8 +636,9 @@ void connectToDriver( TMC2209Stepper* driver, LcdMenu* _lcdMenu, const char *dri
        _lcdMenu->printMenu(String(scratchBuffer));
        delay(1000);
     }
+    #endif
 
-    driver->pdn_disable(true); //enable UART
+    driver->pdn_disable(true); //disable pdn
     driver->mstep_reg_select(true); //enable microstep selection over UART
 }
 #endif
@@ -652,7 +655,7 @@ void connectToDriver( TMC2209Stepper* driver, LcdMenu* _lcdMenu, const char *dri
     _driverRA->begin();
 
     #if RA_DRIVER_TMC2209_UART_MODE == TMC2209_MODE_UART 
-    connectToDriver( _driverRA, _lcdMenu, "RA" );
+    connectToDriver( _driverRA, "RA" );
     #endif
 
     #if RA_AUDIO_FEEDBACK == 1
@@ -685,7 +688,7 @@ void connectToDriver( TMC2209Stepper* driver, LcdMenu* _lcdMenu, const char *dri
     _driverDEC->begin();
 
     #if DEC_DRIVER_TMC2209_UART_MODE == TMC2209_MODE_UART 
-    connectToDriver( _driverDEC, _lcdMenu, "DEC" );
+    connectToDriver( _driverDEC, "DEC" );
     #endif
 
     _driverDEC->blank_time(24);

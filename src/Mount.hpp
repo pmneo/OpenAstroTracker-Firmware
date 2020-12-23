@@ -349,6 +349,8 @@ private:
 
   void autoCalcHa();
 
+  void connectToDriver( TMC2209Stepper* driver, const char *driverKind );
+
 private:
   LcdMenu* _lcdMenu;
   float _stepsPerRADegree;
