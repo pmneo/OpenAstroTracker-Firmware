@@ -2168,7 +2168,7 @@ const char Mount::getPierSide() const {
 
   hourPos += ( trackedSeconds / 60.0f / 60.0f );
 
-  if( hourPos > 0 ) {
+  if( hourPos < 0 ) {
     return NORTHERN_HEMISPHERE ? 'E' : 'W';
   }
   else {

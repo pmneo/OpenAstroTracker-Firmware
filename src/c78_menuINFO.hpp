@@ -4,9 +4,11 @@
 
 #if SUPPORT_INFO_DISPLAY == 1
 byte infoIndex = 0;
-byte maxInfoIndex = 15;
+byte maxInfoIndex = 16;
 byte subIndex = 0;
 unsigned long lastInfoUpdate = 0;
+
+byte menuDirection = 1;
 
 bool processStatusKeys()
 {
@@ -21,12 +23,14 @@ bool processStatusKeys()
     case btnDOWN:
     {
       infoIndex = adjustWrap(infoIndex, 1, 0, maxInfoIndex);
+      menuDirection = 1;
     }
     break;
 
     case btnUP:
     {
       infoIndex = adjustWrap(infoIndex, -1, 0, maxInfoIndex);
+      menuDirection = -1;
     }
     break;
 
@@ -124,7 +128,7 @@ void printStatusSubmenu()
       sprintf(scratchBuffer, "Temp: %d@C %d@F", celsius, fahrenheit);
       lcdMenu.printMenu(scratchBuffer);
 #else
-      infoIndex++;
+      infoIndex += menuDirection;
 #endif
     }
     break;
@@ -213,6 +217,12 @@ void printStatusSubmenu()
     break;
 
     case 15:
+    {
+      lcdMenu.printMenu("Pier Side: " + String(mount.getPierSide()));
+      break;
+    }
+
+    case 16:
     {
       lcdMenu.printMenu("Firmw.: " + String(VERSION));
     }
