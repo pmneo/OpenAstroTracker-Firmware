@@ -589,6 +589,8 @@ String MeadeCommandProcessor::handleMeadeGetInfo(String inCmd)
     else {
       return "N#"; //no movement
     }
+  case 'm': // :Gm# getPearSide
+    return String( _mount->getPierSide() ) + "#";
   case 'V':
     if (cmdTwo == 'N') // :GVN
     {
@@ -992,7 +994,7 @@ String MeadeCommandProcessor::handleMeadeHome(String inCmd)
   else if (inCmd[0] == 'N' ) 
   { // Sleep
     _mount->stopSlewing(ALL_DIRECTIONS | TRACKING);
-    waitUntilStopped(ALL_DIRECTIONS);
+    _mount->waitUntilStopped(ALL_DIRECTIONS);
     return "1";
   }
   else if (inCmd[0] == 'W' ) 

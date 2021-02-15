@@ -875,91 +875,6 @@ Declination& Mount::targetDEC() {
   return _targetDEC;
 }
 
-const char Mount::getPierSide() const {
-  // How many steps moves the RA ring one sidereal hour along. One sidereal hour moves just shy of 15 degrees
-  // TODO: currentPosition() may not be reliable if switching microstepping between guiding & slewing. This implementation assumes no time in guiding mode
-  float stepsPerSiderealHour = _stepsPerRADegree * siderealDegreesInHour;   // u-steps/degree * degrees/hr = u-steps/hr
-  float hourPos =  -_stepperRA->currentPosition() / stepsPerSiderealHour;   // u-steps / u-steps/hr = hr
-
-  hourPos += _zeroPosRA.getTotalHours();
-  // LOGV2(DEBUG_MOUNT_VERBOSE,F("CurrentRA: ZeroPos    : %s"), _zeroPosRA.ToString());
-  // LOGV2(DEBUG_MOUNT_VERBOSE,F("CurrentRA: POS (+zp)  : %s"), DayTime(hourPos).ToString());
-
-  bool flipRA = NORTHERN_HEMISPHERE ? _stepperDEC->currentPosition() < 0 : _stepperDEC->currentPosition() > 0;
-
-  if (flipRA)
-  {
-    hourPos += 12;
-    if (hourPos > 24) hourPos -= 24;
-  }
-
-  // Make sure we are normalized
-  if (hourPos < 0) hourPos += 24;
-  if (hourPos > 24) hourPos -= 24;
-
-  // LOGV2(DEBUG_MOUNT_VERBOSE,F("CurrentRA: RA Pos  -> : %s"), DayTime(hourPos).ToString());
-  return hourPos;
-
-  //LOGV3(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersPre: Current: RA: %s, DEC: %s"), currentRA().ToString(), currentDEC().ToString());
-  //LOGV3(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersPre: Target : RA: %s, DEC: %s"), _targetRA.ToString(), _targetDEC.ToString());
-  //LOGV2(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersPre: ZeroRA : %s"), _zeroPosRA.ToString());
-  //LOGV4(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersPre: Stepper: RA: %l, DEC: %l, TRK: %l"), _stepperRA->currentPosition(), _stepperDEC->currentPosition(), _stepperTRK->currentPosition());
-  DayTime raTarget = _targetRA;
-
-  raTarget.subtractTime(_zeroPosRA);
-  //LOGV3(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersIn: Adjust RA by Zeropos. New Target RA: %s, DEC: %s"), raTarget.ToString(), _targetDEC.ToString());
-
-  float hourPos = raTarget.getTotalHours();
-  if (!NORTHERN_HEMISPHERE) {
-    hourPos += 12;
-  }
-  // Map [0 to 24] range to [-12 to +12] range
-  while (hourPos > 12) {
-    hourPos = hourPos - 24;
-    //LOGV3(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersIn: RA>12 so -24. New Target RA: %s, DEC: %s"), DayTime(hourPos).ToString(), _targetDEC.ToString());
-  }
-
-  // How many u-steps moves the RA ring one sidereal hour along when slewing. One sidereal hour moves just shy of 15 degrees
-  float stepsPerSiderealHour = _stepsPerRADegree * siderealDegreesInHour;   // u-steps/deg * deg/hr = u-steps/hr
-
-  // Where do we want to move RA to?
-  float moveRA = hourPos * stepsPerSiderealHour;  // hr * u-steps/hr = u-steps
-
-  // Where do we want to move DEC to?
-  // the variable targetDEC 0deg for the celestial pole (90deg), and goes negative only.
-  float moveDEC = -_targetDEC.getTotalDegrees() * _stepsPerDECDegree;   // deg * u-steps/deg = u-steps
-
-  //LOGV3(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersIn: RA Steps/deg: %d   Steps/srhour: %f"), _stepsPerRADegree, stepsPerSiderealHour);
-  //LOGV3(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersIn: Target Step pos RA: %f, DEC: %f"), moveRA, moveDEC);
-
-  // We can move 6 hours in either direction. Outside of that we need to flip directions.
-  float const RALimit = (7.0f * stepsPerSiderealHour);
-
-  // If we reach the limit in the positive direction ...
-  if (moveRA > RALimit) {
-    //LOGV2(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersIn: RA is past +limit: %f, DEC: %f"), RALimit);
-
-    // ... turn both RA and DEC axis around
-    moveRA -= long(12.0f * stepsPerSiderealHour);
-    moveDEC = -moveDEC;
-    //LOGV3(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersIn: Adjusted Target Step pos RA: %f, DEC: %f"), moveRA, moveDEC);
-  }
-  // If we reach the limit in the negative direction...
-  else if (moveRA < -RALimit) {
-    //LOGV2(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersIn: RA is past -limit: %f, DEC: %f"), -RALimit);
-    // ... turn both RA and DEC axis around
-    moveRA += long(12.0f * stepsPerSiderealHour);
-    moveDEC = -moveDEC;
-    //LOGV1(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersPost: Adjusted Target. Moved RA, inverted DEC"));
-  }
-
-  LOGV3(DEBUG_MOUNT,F("Mount::CalcSteppersPost: Target Steps RA: %f, DEC: %f"), -moveRA, moveDEC);
-  //    float targetRA = clamp(-moveRA, -RAStepperLimit, RAStepperLimit);
-  //    float targetDEC = clamp(moveDEC, DECStepperUpLimit, DECStepperDownLimit);
-  moveRA = -moveRA;
-
-}
-
 /////////////////////////////////
 //
 // currentRA
@@ -2244,6 +2159,23 @@ void Mount::setTargetToHome() {
   stopSlewing(TRACKING);
 }
 
+const char Mount::getPierSide() const {
+
+  float trackedSeconds = _stepperTRK->currentPosition() / _trackingSpeed; // steps / steps/s = seconds
+
+  float stepsPerSiderealHour = _stepsPerRADegree * siderealDegreesInHour;   // u-steps/degree * degrees/hr = u-steps/hr
+  float hourPos =  _stepperRA->currentPosition() / stepsPerSiderealHour;   // u-steps / u-steps/hr = hr
+
+  hourPos += ( trackedSeconds / 60.0f / 60.0f );
+
+  if( hourPos > 0 ) {
+    return NORTHERN_HEMISPHERE ? 'E' : 'W';
+  }
+  else {
+    return NORTHERN_HEMISPHERE ? 'W' : 'E';
+  }
+}
+
 /////////////////////////////////
 //
 // getSpeed
@@ -2275,7 +2207,7 @@ void Mount::calculateRAandDECSteppers(DayTime const& ra, Declination const& dec,
   //LOGV3(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersPre: Target : RA: %s, DEC: %s"), _targetRA.ToString(), _targetDEC.ToString());
   //LOGV2(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersPre: ZeroRA : %s"), _zeroPosRA.ToString());
   //LOGV4(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersPre: Stepper: RA: %l, DEC: %l, TRK: %l"), _stepperRA->currentPosition(), _stepperDEC->currentPosition(), _stepperTRK->currentPosition());
-  DayTime raTarget = _targetRA;
+  DayTime raTarget = ra;
 
   raTarget.subtractTime(_zeroPosRA);
   //LOGV3(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersIn: Adjust RA by Zeropos. New Target RA: %s, DEC: %s"), raTarget.ToString(), _targetDEC.ToString());
@@ -2298,7 +2230,7 @@ void Mount::calculateRAandDECSteppers(DayTime const& ra, Declination const& dec,
 
   // Where do we want to move DEC to?
   // the variable targetDEC 0deg for the celestial pole (90deg), and goes negative only.
-  float moveDEC = -_targetDEC.getTotalDegrees() * _stepsPerDECDegree;   // deg * u-steps/deg = u-steps
+  float moveDEC = -dec.getTotalDegrees() * _stepsPerDECDegree;   // deg * u-steps/deg = u-steps
 
   //LOGV3(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersIn: RA Steps/deg: %d   Steps/srhour: %f"), _stepsPerRADegree, stepsPerSiderealHour);
   //LOGV3(DEBUG_MOUNT_VERBOSE,F("Mount::CalcSteppersIn: Target Step pos RA: %f, DEC: %f"), moveRA, moveDEC);
