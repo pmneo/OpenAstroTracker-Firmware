@@ -28,7 +28,7 @@
     #define RA_STEPPER_SPR            400   // 28BYJ-48 = 4096  |  NEMA 0.9° = 400  |  NEMA 1.8° = 200
   #endif
   #ifndef RA_STEPPER_SPEED
-    #define RA_STEPPER_SPEED          1200  // You can change the speed and acceleration of the steppers here. Max. Speed = 3000. 
+    #define RA_STEPPER_SPEED          3000  // You can change the speed and acceleration of the steppers here. Max. Speed = 3000. 
   #endif
   #ifndef RA_STEPPER_ACCELERATION
     #define RA_STEPPER_ACCELERATION   6000
@@ -52,7 +52,7 @@
     #define DEC_STEPPER_SPR            400   // 28BYJ-48 = 4096  |  NEMA 0.9° = 400  |  NEMA 1.8° = 200
   #endif
   #ifndef DEC_STEPPER_SPEED
-    #define DEC_STEPPER_SPEED          1300  // You can change the speed and acceleration of the steppers here. Max. Speed = 3000. 
+    #define DEC_STEPPER_SPEED          3000  // You can change the speed and acceleration of the steppers here. Max. Speed = 3000. 
   #endif
   #ifndef DEC_STEPPER_ACCELERATION
     #define DEC_STEPPER_ACCELERATION   6000
@@ -79,11 +79,19 @@
 // We plan to re-instate fine modes in a future release, but this will require a significant rework of the implementation.
 //
 #if (RA_DRIVER_TYPE == DRIVER_TYPE_TMC2209_UART)
-  #define RA_SLEW_MICROSTEPPING 8         // The (default) microstep mode used for slewing RA axis
-  #define RA_TRACKING_MICROSTEPPING 8     // The fine microstep mode for tracking RA axis
+  #ifndef RA_SLEW_MICROSTEPPING
+    #define RA_SLEW_MICROSTEPPING 8         // The (default) microstep mode used for slewing RA axis
+  #endif
+  #ifndef RA_TRACKING_MICROSTEPPING
+    #define RA_TRACKING_MICROSTEPPING RA_SLEW_MICROSTEPPING     // The fine microstep mode for tracking RA axis
+  #endif
 #elif (RA_DRIVER_TYPE == DRIVER_TYPE_A4988_GENERIC) || (RA_DRIVER_TYPE == DRIVER_TYPE_TMC2209_STANDALONE)
-  #define RA_SLEW_MICROSTEPPING 8         // Microstep mode set by MS pin strapping. Use the same microstep mode for both slewing & tracking   
-  #define RA_TRACKING_MICROSTEPPING RA_SLEW_MICROSTEPPING   
+  #ifndef RA_SLEW_MICROSTEPPING
+    #define RA_SLEW_MICROSTEPPING 8         // The (default) microstep mode used for slewing RA axis
+  #endif
+  #ifndef RA_TRACKING_MICROSTEPPING
+    #define RA_TRACKING_MICROSTEPPING RA_SLEW_MICROSTEPPING     // The fine microstep mode for tracking RA axis
+  #endif
 #elif (RA_DRIVER_TYPE == DRIVER_TYPE_ULN2003)
   #define RA_SLEW_MICROSTEPPING 2         // The (default) half-step mode used for slewing RA axis
   #define RA_TRACKING_MICROSTEPPING 2     // The fine half-step mode for tracking RA axis
@@ -92,11 +100,19 @@
 #endif
 
 #if (DEC_DRIVER_TYPE == DRIVER_TYPE_TMC2209_UART)
-  #define DEC_SLEW_MICROSTEPPING  16  // The (default) microstep mode used for slewing DEC
-  #define DEC_GUIDE_MICROSTEPPING 16  // The fine microstep mode used for guiding DEC only
+  #ifndef DEC_SLEW_MICROSTEPPING
+    #define DEC_SLEW_MICROSTEPPING  16  // The (default) microstep mode used for slewing DEC
+  #endif
+  #ifndef DEC_GUIDE_MICROSTEPPING
+    #define DEC_GUIDE_MICROSTEPPING DEC_SLEW_MICROSTEPPING  // The fine microstep mode used for guiding DEC only
+  #endif
 #elif (DEC_DRIVER_TYPE == DRIVER_TYPE_A4988_GENERIC) || (DEC_DRIVER_TYPE == DRIVER_TYPE_TMC2209_STANDALONE)
-  #define DEC_SLEW_MICROSTEPPING  16  // Only UART drivers support dynamic switching. Use the same microstep mode for both slewing & guiding
-  #define DEC_GUIDE_MICROSTEPPING DEC_SLEW_MICROSTEPPING
+#ifndef DEC_SLEW_MICROSTEPPING
+    #define DEC_SLEW_MICROSTEPPING  16  // The (default) microstep mode used for slewing DEC
+  #endif
+  #ifndef DEC_GUIDE_MICROSTEPPING
+    #define DEC_GUIDE_MICROSTEPPING DEC_SLEW_MICROSTEPPING  // The fine microstep mode used for guiding DEC only
+  #endif
 #elif (DEC_DRIVER_TYPE == DRIVER_TYPE_ULN2003)
   #define DEC_SLEW_MICROSTEPPING   2  // Runs in half-step mode always
   #define DEC_GUIDE_MICROSTEPPING DEC_SLEW_MICROSTEPPING
@@ -154,8 +170,9 @@
 // So there are 300.1 steps/degree (108245 / 360)  (V2: 322 (115812 / 360))
 // Theoretically correct RA tracking speed is 1.246586 (300 x 14.95903 / 3600) (V2 : 1.333800 (322 x 14.95903 / 3600) steps/sec (this is for 20T)
 // Include microstepping ratio here such that steps/sec is updates/sec to stepper driver
+#ifndef RA_STEPS_PER_DEGREE
 #define RA_STEPS_PER_DEGREE   (RA_WHEEL_CIRCUMFERENCE / (RA_PULLEY_TEETH * GT2_BELT_PITCH) * RA_STEPPER_SPR * RA_SLEW_MICROSTEPPING / 360.0)
-
+#endif
 // DEC movement:
 // Belt moves 40mm for one stepper revolution (2mm pitch, 20 teeth).
 // DEC wheel is 2 x PI x 90mm circumference which is 565.5mm
@@ -163,8 +180,9 @@
 // Which means 57907 steps (14.14 x 4096) moves 360 degrees
 // So there are 160.85 steps/degree (57907/360) (this is for 20T)
 // Include microstepping ratio here such that steps/sec is updates/sec to stepper driver
+#ifndef DEC_STEPS_PER_DEGREE
 #define DEC_STEPS_PER_DEGREE  (DEC_WHEEL_CIRCUMFERENCE / (DEC_PULLEY_TEETH * GT2_BELT_PITCH) * DEC_STEPPER_SPR * DEC_SLEW_MICROSTEPPING / 360.0)
-
+#endif
 ////////////////////////////
 //
 // GUIDE SETTINGS

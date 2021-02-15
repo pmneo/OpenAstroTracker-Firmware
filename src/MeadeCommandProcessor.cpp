@@ -565,6 +565,30 @@ String MeadeCommandProcessor::handleMeadeGetInfo(String inCmd)
 
   switch (cmdOne)
   {
+  case 'v': // :Gv# getMovementState
+    if( _mount->isGuiding() ) {
+      return "G#"; //Guiding
+    }
+    else if( _mount->isParking() ) {
+      return "S#"; //Slewing
+    }
+    else if( _mount->isParked() ) {
+      return "N#"; //No movment
+    }
+    else if( _mount->isSlewingRAorDEC() ) {
+      return "S#";
+    }
+    else if( _mount->isSlewingTRK() ) {
+      return "T#"; //Tracking
+    }
+    /*
+    else if( _mount->isCentering() ) {
+      return "C#"; //Centering
+    }
+    */
+    else {
+      return "N#"; //no movement
+    }
   case 'V':
     if (cmdTwo == 'N') // :GVN
     {
@@ -964,6 +988,28 @@ String MeadeCommandProcessor::handleMeadeHome(String inCmd)
   { // Unpark
     _mount->startSlewing(TRACKING);
     return "1";
+  }
+  else if (inCmd[0] == 'N' ) 
+  { // Sleep
+    _mount->stopSlewing(ALL_DIRECTIONS | TRACKING);
+    waitUntilStopped(ALL_DIRECTIONS);
+    return "1";
+  }
+  else if (inCmd[0] == 'W' ) 
+  { // Wakeup
+    _mount->startSlewing(TRACKING);
+    return "1";
+  }
+  else if (inCmd[0] == '?') {
+    if( _mount->isParked() ) {
+      return "1#";
+    }
+    else if( _mount->isParking() ) {
+      return "2#";
+    }
+    else {
+      return "0#";
+    }
   }
   return "";
 }

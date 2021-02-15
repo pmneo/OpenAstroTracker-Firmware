@@ -174,6 +174,8 @@ public:
   // Get current RA value.
   const DayTime currentRA() const;
 
+  const char getPierSide() const;
+
   // Get current DEC value.
   const Declination currentDEC() const;
 
